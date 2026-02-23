@@ -1,0 +1,83 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      String   @default("USER") // USER | ADMIN
+  orders    Order[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Product {
+  id          String      @id @default(cuid())
+  title       String
+  author      String
+  description String
+  price       Float
+  format      String      // EBOOK | AUDIOBOOK
+  category    String
+  coverUrl    String
+  filePath    String
+  sampleUrl   String      @default("")
+  featured    Boolean     @default(false)
+  active      Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  orderItems  OrderItem[]
+}
+
+model Order {
+  id                String          @id @default(cuid())
+  userId            String
+  user              User            @relation(fields: [userId], references: [id])
+  total             Float
+  status            String          @default("PENDING") // PENDING | PAID | REFUNDED
+  razorpayOrderId   String          @unique
+  razorpayPaymentId String?
+  couponCode        String?
+  discountAmount    Float           @default(0)
+  items             OrderItem[]
+  downloadTokens    DownloadToken[]
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id])
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  price     Float
+}
+
+model DownloadToken {
+  id            String   @id @default(cuid())
+  orderId       String
+  order         Order    @relation(fields: [orderId], references: [id])
+  productId     String
+  token         String   @unique
+  expiresAt     DateTime
+  maxDownloads  Int      @default(3)
+  downloadCount Int      @default(0)
+  createdAt     DateTime @default(now())
+}
+
+model Coupon {
+  id              String  @id @default(cuid())
+  code            String  @unique
+  discountPercent Float
+  active          Boolean @default(true)
+  usageLimit      Int     @default(100)
+  usageCount      Int     @default(0)
+}

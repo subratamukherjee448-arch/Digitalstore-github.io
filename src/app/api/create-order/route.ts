@@ -1,0 +1,148 @@
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/db";
+import { v4 as uuidv4 } from "uuid";
+
+// Check if Razorpay is configured with real keys
+function isRazorpayConfigured() {
+    const key = process.env.RAZORPAY_KEY_ID || "";
+    return key.startsWith("rzp_") && !key.includes("placeholder") && !key.includes("YOUR");
+}
+
+export async function POST(req: NextRequest) {
+    try {
+        const session = await getServerSession(authOptions);
+        if (!session?.user) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        const body = await req.json();
+        const { items, couponCode } = body;
+
+        if (!items || !Array.isArray(items) || items.length === 0) {
+            return NextResponse.json({ error: "Cart is empty" }, { status: 400 });
+        }
+
+        // Fetch products and calculate total
+        const productIds = items.map((i: any) => i.productId);
+        const products = await prisma.product.findMany({
+            where: { id: { in: productIds }, active: true },
+        });
+
+        if (products.length !== productIds.length) {
+            return NextResponse.json({ error: "Some products are unavailable" }, { status: 400 });
+        }
+
+        let subtotal = 0;
+        const orderItems = items.map((item: any) => {
+            const product = products.find((p) => p.id === item.productId)!;
+            const itemTotal = product.price * (item.quantity || 1);
+            subtotal += itemTotal;
+            return { productId: product.id, price: itemTotal };
+        });
+
+        // Apply coupon
+        let discountAmount = 0;
+        if (couponCode) {
+            const coupon = await prisma.coupon.findUnique({ where: { code: couponCode } });
+            if (coupon && coupon.active && coupon.usageCount < coupon.usageLimit) {
+                discountAmount = Math.round(subtotal * (coupon.discountPercent / 100));
+            }
+        }
+
+        const total = Math.max(subtotal - discountAmount, 1);
+        const demoMode = !isRazorpayConfigured();
+        const userId = (session.user as any).id;
+
+        if (demoMode) {
+            // DEMO MODE: skip Razorpay, create order directly as PAID
+            const demoRazorpayId = `demo_order_${Date.now()}`;
+
+            const order = await prisma.order.create({
+                data: {
+                    userId,
+                    total,
+                    status: "PAID",
+                    razorpayOrderId: demoRazorpayId,
+                    razorpayPaymentId: `demo_pay_${Date.now()}`,
+                    couponCode: couponCode || null,
+                    discountAmount,
+                    items: { create: orderItems },
+                },
+                include: { items: true },
+            });
+
+            // Create download tokens
+            const expiryHours = parseInt(process.env.DOWNLOAD_EXPIRY_HOURS || "24");
+            const maxDownloads = parseInt(process.env.DOWNLOAD_MAX_COUNT || "3");
+            const expiresAt = new Date(Date.now() + expiryHours * 60 * 60 * 1000);
+
+            for (const item of order.items) {
+                await prisma.downloadToken.create({
+                    data: {
+                        orderId: order.id,
+                        productId: item.productId,
+                        token: uuidv4(),
+                        expiresAt,
+                        maxDownloads,
+                    },
+                });
+            }
+
+            // Update coupon usage
+            if (couponCode) {
+                await prisma.coupon.update({
+                    where: { code: couponCode },
+                    data: { usageCount: { increment: 1 } },
+                }).catch(() => { });
+            }
+
+            console.log(`✅ [DEMO] Order ${order.id} created and marked PAID`);
+
+            return NextResponse.json({
+                orderId: order.id,
+                demoMode: true,
+                amount: total * 100,
+                currency: "INR",
+            });
+        }
+
+        // LIVE MODE: create Razorpay order
+        const { getRazorpayInstance } = require("@/lib/razorpay");
+        const razorpay = getRazorpayInstance();
+        const razorpayOrder = await razorpay.orders.create({
+            amount: total * 100,
+            currency: "INR",
+            receipt: `order_${Date.now()}`,
+        });
+
+        const order = await prisma.order.create({
+            data: {
+                userId,
+                total,
+                status: "PENDING",
+                razorpayOrderId: razorpayOrder.id,
+                couponCode: couponCode || null,
+                discountAmount,
+                items: { create: orderItems },
+            },
+            include: { items: true },
+        });
+
+        return NextResponse.json({
+            orderId: order.id,
+            razorpayOrderId: razorpayOrder.id,
+            razorpayKeyId: process.env.RAZORPAY_KEY_ID,
+            amount: total * 100,
+            currency: "INR",
+            demoMode: false,
+        });
+    } catch (error: any) {
+        console.error("Create order error:", error);
+        return NextResponse.json(
+            { error: "Failed to create order" },
+            { status: 500 }
+        );
+    }
+}

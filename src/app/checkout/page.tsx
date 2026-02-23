@@ -1,0 +1,245 @@
+"use client";
+
+import { useCart } from "@/context/CartContext";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import Link from "next/link";
+import AnimatedPage from "@/components/AnimatedPage";
+
+declare global {
+    interface Window {
+        Razorpay: any;
+    }
+}
+
+export default function CheckoutPage() {
+    const { items, total, subtotal, discount, couponCode, clearCart } = useCart();
+    const { data: session, status } = useSession();
+    const router = useRouter();
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState("");
+
+    if (items.length === 0) {
+        return (
+            <AnimatedPage>
+                <div className="section-padding py-20 text-center">
+                    <h1 className="font-display text-2xl font-bold text-surface-900 mb-4">
+                        No items to checkout
+                    </h1>
+                    <Link href="/shop" className="btn-primary">Go to Shop</Link>
+                </div>
+            </AnimatedPage>
+        );
+    }
+
+    if (status === "loading") {
+        return (
+            <AnimatedPage>
+                <div className="section-padding py-20 text-center">
+                    <div className="animate-spin h-10 w-10 border-4 border-brand-200 border-t-brand-600 rounded-full mx-auto"></div>
+                    <p className="text-surface-500 mt-4">Loading...</p>
+                </div>
+            </AnimatedPage>
+        );
+    }
+
+    if (!session) {
+        return (
+            <AnimatedPage>
+                <div className="section-padding py-20 text-center">
+                    <div className="text-6xl mb-6">🔐</div>
+                    <h1 className="font-display text-2xl font-bold text-surface-900 mb-3">
+                        Please sign in to continue
+                    </h1>
+                    <p className="text-surface-500 mb-6">
+                        You need an account to complete your purchase.
+                    </p>
+                    <Link href="/login?callbackUrl=/checkout" className="btn-primary">Sign In</Link>
+                </div>
+            </AnimatedPage>
+        );
+    }
+
+    const handleCheckout = async () => {
+        setLoading(true);
+        setError("");
+
+        try {
+            // 1. Create order on server
+            const res = await fetch("/api/create-order", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    items: items.map((i) => ({ productId: i.id, quantity: i.quantity })),
+                    couponCode: couponCode || undefined,
+                }),
+            });
+
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || "Failed to create order");
+            }
+
+            const orderData = await res.json();
+
+            // DEMO MODE: order is already paid, go to success
+            if (orderData.demoMode) {
+                clearCart();
+                router.push(`/checkout/success?orderId=${orderData.orderId}`);
+                return;
+            }
+
+            // LIVE MODE: Open Razorpay checkout
+            const loadRazorpay = (): Promise<boolean> => {
+                return new Promise((resolve) => {
+                    if (window.Razorpay) { resolve(true); return; }
+                    const script = document.createElement("script");
+                    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+                    script.onload = () => resolve(true);
+                    script.onerror = () => resolve(false);
+                    document.body.appendChild(script);
+                });
+            };
+
+            const loaded = await loadRazorpay();
+            if (!loaded) {
+                setError("Failed to load payment gateway.");
+                setLoading(false);
+                return;
+            }
+
+            const options = {
+                key: orderData.razorpayKeyId,
+                amount: orderData.amount,
+                currency: orderData.currency,
+                name: "College Digital Store",
+                description: `Order #${orderData.orderId.slice(-8).toUpperCase()}`,
+                order_id: orderData.razorpayOrderId,
+                prefill: {
+                    name: session.user?.name || "",
+                    email: session.user?.email || "",
+                },
+                theme: { color: "#4f46e5" },
+                handler: async function (response: any) {
+                    try {
+                        const verifyRes = await fetch("/api/verify-payment", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                razorpay_order_id: response.razorpay_order_id,
+                                razorpay_payment_id: response.razorpay_payment_id,
+                                razorpay_signature: response.razorpay_signature,
+                                orderId: orderData.orderId,
+                            }),
+                        });
+                        if (verifyRes.ok) {
+                            clearCart();
+                            router.push(`/checkout/success?orderId=${orderData.orderId}`);
+                        } else {
+                            router.push(`/checkout/failure?orderId=${orderData.orderId}`);
+                        }
+                    } catch {
+                        router.push(`/checkout/failure?orderId=${orderData.orderId}`);
+                    }
+                },
+                modal: { ondismiss: () => setLoading(false) },
+            };
+
+            const razorpay = new window.Razorpay(options);
+            razorpay.on("payment.failed", (resp: any) => {
+                router.push(`/checkout/failure?reason=${resp.error.description}`);
+            });
+            razorpay.open();
+        } catch (err: any) {
+            setError(err.message || "Something went wrong");
+            setLoading(false);
+        }
+    };
+
+    return (
+        <AnimatedPage>
+            <div className="section-padding py-10 max-w-2xl mx-auto">
+                <h1 className="font-display text-3xl font-bold text-surface-900 mb-8">
+                    Checkout
+                </h1>
+
+                <div className="card p-6 mb-6">
+                    <h2 className="font-semibold text-surface-900 mb-4">Order Summary</h2>
+                    <div className="space-y-3">
+                        {items.map((item) => (
+                            <div key={item.id} className="flex justify-between text-sm">
+                                <span className="text-surface-600">
+                                    {item.title} × {item.quantity}
+                                </span>
+                                <span className="font-medium text-surface-900">
+                                    ₹{item.price * item.quantity}
+                                </span>
+                            </div>
+                        ))}
+                        <div className="border-t border-surface-200 pt-3 space-y-2">
+                            <div className="flex justify-between text-sm text-surface-600">
+                                <span>Subtotal</span>
+                                <span>₹{subtotal}</span>
+                            </div>
+                            {discount > 0 && (
+                                <div className="flex justify-between text-sm text-green-600">
+                                    <span>Discount ({discount}%)</span>
+                                    <span>−₹{Math.round(subtotal * discount / 100)}</span>
+                                </div>
+                            )}
+                            <div className="flex justify-between font-bold text-lg text-surface-900 pt-2">
+                                <span>Total</span>
+                                <span>₹{total}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="card p-6 mb-6">
+                    <h2 className="font-semibold text-surface-900 mb-2">Payment Details</h2>
+                    <p className="text-sm text-surface-500 mb-1">
+                        Paying as: <strong>{session.user?.email}</strong>
+                    </p>
+                    <div className="mt-3 p-3 rounded-lg bg-brand-50 border border-brand-200">
+                        <p className="text-xs text-brand-700 font-medium">
+                            🎓 Demo Mode — Payment will be simulated for demonstration purposes.
+                        </p>
+                    </div>
+                </div>
+
+                {error && (
+                    <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
+                        <p className="text-sm text-red-700">{error}</p>
+                    </div>
+                )}
+
+                <button
+                    id="purchase-btn"
+                    onClick={handleCheckout}
+                    disabled={loading}
+                    className="btn-primary w-full text-base py-4"
+                >
+                    {loading ? (
+                        <span className="flex items-center gap-2 justify-center">
+                            <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                            </svg>
+                            Processing...
+                        </span>
+                    ) : (
+                        `Complete Purchase — ₹${total}`
+                    )}
+                </button>
+
+                <p className="text-xs text-center text-surface-400 mt-4">
+                    By completing this purchase, you agree to our{" "}
+                    <Link href="/legal/terms" className="text-brand-600 hover:underline">Terms of Service</Link>
+                    {" "}and{" "}
+                    <Link href="/legal/refund" className="text-brand-600 hover:underline">Refund Policy</Link>.
+                </p>
+            </div>
+        </AnimatedPage>
+    );
+}
