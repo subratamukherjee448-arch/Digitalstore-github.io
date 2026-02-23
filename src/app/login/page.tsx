@@ -2,12 +2,12 @@
 
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import AnimatedPage from "@/components/AnimatedPage";
 
-export default function LoginPage() {
+function LoginForm() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const callbackUrl = searchParams.get("callbackUrl") || "/";
@@ -24,7 +24,6 @@ export default function LoginPage() {
         setError("");
 
         if (isRegister) {
-            // Register new user
             try {
                 const res = await fetch("/api/register", {
                     method: "POST",
@@ -37,7 +36,6 @@ export default function LoginPage() {
                     setLoading(false);
                     return;
                 }
-                // Auto sign in after registration
             } catch {
                 setError("Registration failed");
                 setLoading(false);
@@ -164,5 +162,17 @@ export default function LoginPage() {
                 </div>
             </div>
         </AnimatedPage>
+    );
+}
+
+export default function LoginPage() {
+    return (
+        <Suspense fallback={
+            <div className="section-padding py-20 text-center">
+                <div className="animate-spin h-10 w-10 border-4 border-brand-200 border-t-brand-600 rounded-full mx-auto"></div>
+            </div>
+        }>
+            <LoginForm />
+        </Suspense>
     );
 }

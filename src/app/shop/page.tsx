@@ -2,6 +2,8 @@ import { prisma } from "@/lib/db";
 import type { Metadata } from "next";
 import ShopClient from "./ShopClient";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
     title: "Shop",
     description: "Browse our collection of premium ebooks and audiobooks.",

@@ -3,6 +3,8 @@ import Image from "next/image";
 import { prisma } from "@/lib/db";
 import ProductCard from "@/components/ProductCard";
 
+export const dynamic = "force-dynamic";
+
 async function getFeaturedProducts() {
     return prisma.product.findMany({
         where: { featured: true, active: true },
