@@ -50,6 +50,19 @@ async function main() {
             featured: true,
         },
         {
+            title: "Canva Design Templates Pack",
+            author: "Digital Store",
+            description:
+                "50+ premium Canva templates for social media posts, stories, presentations, and marketing materials. Ready-to-use, fully customizable designs for Instagram, LinkedIn, and more.",
+            price: 2,
+            format: "EBOOK",
+            category: "Design",
+            coverUrl: "/covers/digital-marketing.jpg",
+            filePath: "canva-templates.pdf",
+            sampleUrl: "",
+            featured: true,
+        },
+        {
             title: "Data Structures for Interviews",
             author: "Priya Sharma",
             description:
