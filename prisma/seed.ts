@@ -37,6 +37,19 @@ async function main() {
     // Create sample products
     const products = [
         {
+            title: "Razorpay Test Item",
+            author: "Test Store",
+            description:
+                "This is a ₹1 test product for verifying Razorpay payment integration. Use this to confirm that the payment gateway is working correctly.",
+            price: 1,
+            format: "EBOOK",
+            category: "Test",
+            coverUrl: "/covers/data-structures.jpg",
+            filePath: "test-item.pdf",
+            sampleUrl: "",
+            featured: true,
+        },
+        {
             title: "Data Structures for Interviews",
             author: "Priya Sharma",
             description:

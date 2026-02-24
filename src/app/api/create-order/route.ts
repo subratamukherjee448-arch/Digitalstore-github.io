@@ -2,13 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { isRazorpayConfigured } from "@/lib/razorpay";
 import { v4 as uuidv4 } from "uuid";
 
-// Check if Razorpay is configured with real keys
-function isRazorpayConfigured() {
-    const key = process.env.RAZORPAY_KEY_ID || "";
-    return key.startsWith("rzp_") && !key.includes("placeholder") && !key.includes("YOUR");
-}
 
 export async function POST(req: NextRequest) {
     try {

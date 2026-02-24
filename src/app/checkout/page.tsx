@@ -3,7 +3,7 @@
 import { useCart } from "@/context/CartContext";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import AnimatedPage from "@/components/AnimatedPage";
 
@@ -19,6 +19,15 @@ export default function CheckoutPage() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
+    const [demoMode, setDemoMode] = useState<boolean | null>(null);
+
+    // Detect whether Razorpay is configured (live) or not (demo)
+    useEffect(() => {
+        fetch("/api/config-status")
+            .then((res) => res.json())
+            .then((data) => setDemoMode(data.demoMode))
+            .catch(() => setDemoMode(true)); // fallback to demo
+    }, []);
 
     if (items.length === 0) {
         return (
@@ -201,11 +210,30 @@ export default function CheckoutPage() {
                     <p className="text-sm text-surface-500 mb-1">
                         Paying as: <strong>{session.user?.email}</strong>
                     </p>
-                    <div className="mt-3 p-3 rounded-lg bg-brand-50 border border-brand-200">
-                        <p className="text-xs text-brand-700 font-medium">
-                            🎓 Demo Mode — Payment will be simulated for demonstration purposes.
-                        </p>
-                    </div>
+
+                    {/* Dynamic Demo / Live Razorpay Banner */}
+                    {demoMode === null ? (
+                        <div className="mt-3 p-3 rounded-lg bg-surface-50 border border-surface-200 animate-pulse">
+                            <p className="text-xs text-surface-400 font-medium">Checking payment gateway...</p>
+                        </div>
+                    ) : demoMode ? (
+                        <div className="mt-3 p-3 rounded-lg bg-brand-50 border border-brand-200">
+                            <p className="text-xs text-brand-700 font-medium">
+                                🎓 Demo Mode — Payment will be simulated for demonstration purposes.
+                            </p>
+                        </div>
+                    ) : (
+                        <div className="mt-3 p-3 rounded-lg bg-green-50 border border-green-200">
+                            <div className="flex items-center gap-2">
+                                <svg className="w-4 h-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                                </svg>
+                                <p className="text-xs text-green-700 font-medium">
+                                    Secured by Razorpay — Your payment is protected with 256-bit encryption.
+                                </p>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {error && (
@@ -217,7 +245,7 @@ export default function CheckoutPage() {
                 <button
                     id="purchase-btn"
                     onClick={handleCheckout}
-                    disabled={loading}
+                    disabled={loading || demoMode === null}
                     className="btn-primary w-full text-base py-4"
                 >
                     {loading ? (
@@ -228,8 +256,10 @@ export default function CheckoutPage() {
                             </svg>
                             Processing...
                         </span>
-                    ) : (
+                    ) : demoMode ? (
                         `Complete Purchase — ₹${total}`
+                    ) : (
+                        `Pay with Razorpay — ₹${total}`
                     )}
                 </button>
 
@@ -243,3 +273,4 @@ export default function CheckoutPage() {
         </AnimatedPage>
     );
 }
+
