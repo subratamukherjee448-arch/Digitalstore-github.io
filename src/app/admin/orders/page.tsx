@@ -51,13 +51,13 @@ export default async function AdminOrdersPage() {
                                     <td className="p-4 font-semibold">₹{order.total}</td>
                                     <td className="p-4">
                                         <span className={`badge ${order.status === "PAID" ? "bg-green-100 text-green-700" :
-                                                order.status === "REFUNDED" ? "bg-orange-100 text-orange-700" :
-                                                    "bg-yellow-100 text-yellow-700"
+                                            order.status === "REFUNDED" ? "bg-orange-100 text-orange-700" :
+                                                "bg-yellow-100 text-yellow-700"
                                             }`}>
                                             {order.status}
                                         </span>
                                     </td>
-                                    <td className="p-4 text-surface-400 text-xs">
+                                    <td className="p-4 text-surface-400 text-xs" suppressHydrationWarning>
                                         {new Date(order.createdAt).toLocaleDateString()}
                                     </td>
                                     <td className="p-4">

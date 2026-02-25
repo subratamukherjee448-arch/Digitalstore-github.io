@@ -45,7 +45,7 @@ export default async function AccountPage() {
                         id: user.id,
                         name: user.name,
                         email: user.email,
-                        phone: user.phone,
+                        phone: (user as any).phone,
                         role: user.role
                     }} />
                 </div>
@@ -68,7 +68,7 @@ export default async function AccountPage() {
                                         <h3 className="font-semibold text-surface-900">
                                             Order #{order.id.slice(-8).toUpperCase()}
                                         </h3>
-                                        <p className="text-xs text-surface-400">
+                                        <p className="text-xs text-surface-400" suppressHydrationWarning>
                                             {new Date(order.createdAt).toLocaleDateString("en-IN", {
                                                 year: "numeric", month: "long", day: "numeric",
                                             })}
@@ -121,7 +121,7 @@ export default async function AccountPage() {
                                                                 {(product as any)?.title || "Download"}
                                                             </a>
                                                         )}
-                                                        <span className="text-xs text-surface-400">
+                                                        <span className="text-xs text-surface-400" suppressHydrationWarning>
                                                             {isExpired ? "Expired" : isMaxed ? "Limit reached" :
                                                                 `${token.maxDownloads - token.downloadCount} left • Expires ${new Date(token.expiresAt).toLocaleDateString()}`}
                                                         </span>

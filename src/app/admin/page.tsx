@@ -109,7 +109,7 @@ export default async function AdminDashboardPage() {
                                             {order.status}
                                         </span>
                                     </td>
-                                    <td className="p-4 text-surface-400 text-xs">
+                                    <td className="p-4 text-surface-400 text-xs" suppressHydrationWarning>
                                         {new Date(order.createdAt).toLocaleDateString()}
                                     </td>
                                 </tr>

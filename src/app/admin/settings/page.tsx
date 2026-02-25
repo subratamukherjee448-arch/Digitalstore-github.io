@@ -30,7 +30,7 @@ export default async function AdminSettingsPage() {
                 id: user.id,
                 name: user.name,
                 email: user.email,
-                phone: user.phone,
+                phone: (user as any).phone,
                 role: user.role
             }} isAdminLayout={true} />
         </div>

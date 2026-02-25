@@ -69,7 +69,7 @@ export default async function CheckoutSuccessPage({ searchParams }: Props) {
                                             <span className="text-sm font-medium text-brand-700">
                                                 {product?.title || "Download"}
                                             </span>
-                                            <span className="text-xs text-brand-500">
+                                            <span className="text-xs text-brand-500" suppressHydrationWarning>
                                                 Expires: {new Date(token.expiresAt).toLocaleDateString()} •{" "}
                                                 {token.maxDownloads - token.downloadCount} downloads left
                                             </span>
