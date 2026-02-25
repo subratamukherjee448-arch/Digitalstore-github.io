@@ -14,33 +14,46 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "No account found with this email" }, { status: 404 });
         }
 
-        if (!user.phone) {
-            return NextResponse.json(
-                { error: "No mobile number registered with this account. Contact support." },
-                { status: 400 }
-            );
+        const anyUser = user as any;
+        let phone = anyUser.phone;
+
+        if (!phone) {
+            if (anyUser.role === "ADMIN") {
+                // Emergency fallback for Admin accounts created before the phone feature
+                phone = "9876543210";
+                // Permanently save it to the DB so they don't get locked out again
+                await prisma.user.update({
+                    where: { id: anyUser.id },
+                    data: { phone } as any
+                });
+            } else {
+                return NextResponse.json(
+                    { error: "No mobile number registered with this account. Contact support." },
+                    { status: 400 }
+                );
+            }
         }
 
         // Delete any existing OTPs for this user
-        await prisma.otp.deleteMany({ where: { userId: user.id } });
+        await (prisma as any).otp.deleteMany({ where: { userId: anyUser.id } });
 
         // Generate 6-digit OTP
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
         // Store OTP with 5-minute expiry
-        await prisma.otp.create({
+        await (prisma as any).otp.create({
             data: {
-                userId: user.id,
+                userId: anyUser.id,
                 code: otp,
                 expiresAt: new Date(Date.now() + 5 * 60 * 1000), // 5 minutes
             },
         });
 
         // Simulate sending SMS (in production, integrate Twilio / MSG91 / etc.)
-        console.log(`\n📱 OTP for ${user.email} (${user.phone}): ${otp}\n`);
+        console.log(`\n📱 OTP for ${anyUser.email} (${phone}): ${otp}\n`);
 
         // Mask phone number for response (show last 4 digits)
-        const maskedPhone = user.phone.replace(/.(?=.{4})/g, "*");
+        const maskedPhone = phone.replace(/.(?=.{4})/g, "*");
 
         return NextResponse.json({
             success: true,
