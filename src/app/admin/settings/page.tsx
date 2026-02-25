@@ -26,7 +26,13 @@ export default async function AdminSettingsPage() {
                 <Link href="/admin" className="btn-ghost text-sm">← Back to Dashboard</Link>
             </div>
 
-            <ProfileForm user={user} isAdminLayout={true} />
+            <ProfileForm user={{
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                phone: user.phone,
+                role: user.role
+            }} isAdminLayout={true} />
         </div>
     );
 }

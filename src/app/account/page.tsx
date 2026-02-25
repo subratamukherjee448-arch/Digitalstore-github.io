@@ -41,7 +41,13 @@ export default async function AccountPage() {
             <div className="space-y-8">
                 {/* Profile Settings Section */}
                 <div>
-                    <ProfileForm user={user} />
+                    <ProfileForm user={{
+                        id: user.id,
+                        name: user.name,
+                        email: user.email,
+                        phone: user.phone,
+                        role: user.role
+                    }} />
                 </div>
                 <h2 className="font-display text-xl font-bold text-surface-900">
                     Order History
