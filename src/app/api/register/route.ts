@@ -4,7 +4,7 @@ import { hash } from "bcryptjs";
 
 export async function POST(req: NextRequest) {
     try {
-        const { email, password, name } = await req.json();
+        const { email, password, name, phone } = await req.json();
 
         if (!email || !password || !name) {
             return NextResponse.json({ error: "All fields are required" }, { status: 400 });
@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
 
         const hashedPassword = await hash(password, 12);
         const user = await prisma.user.create({
-            data: { email, password: hashedPassword, name, role: "USER" },
+            data: { email, password: hashedPassword, name, phone: phone || null, role: "USER" },
         });
 
         return NextResponse.json({ id: user.id, email: user.email, name: user.name });

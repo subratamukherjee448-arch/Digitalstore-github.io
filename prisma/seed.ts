@@ -15,6 +15,7 @@ async function main() {
             email: "admin@store.com",
             password: adminPassword,
             name: "Admin",
+            phone: "9876543210",
             role: "ADMIN",
         },
     });
