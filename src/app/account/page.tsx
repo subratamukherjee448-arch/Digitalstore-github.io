@@ -3,6 +3,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import ProfileForm from "@/components/ProfileForm";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "My Account" };
@@ -13,25 +14,35 @@ export default async function AccountPage() {
 
     const userId = (session.user as any).id;
 
-    const orders = await prisma.order.findMany({
-        where: { userId },
-        include: {
-            items: { include: { product: true } },
-            downloadTokens: true,
-        },
-        orderBy: { createdAt: "desc" },
-    });
+    // Fetch complete user details and orders
+    const [user, orders] = await Promise.all([
+        prisma.user.findUnique({ where: { id: userId } }),
+        prisma.order.findMany({
+            where: { userId },
+            include: {
+                items: { include: { product: true } },
+                downloadTokens: true,
+            },
+            orderBy: { createdAt: "desc" },
+        })
+    ]);
+
+    if (!user) redirect("/login");
 
     return (
         <div className="section-padding py-10">
             <div className="flex items-center justify-between mb-8">
                 <div>
                     <h1 className="font-display text-3xl font-bold text-surface-900">My Account</h1>
-                    <p className="text-surface-500">{session.user.email}</p>
+                    <p className="text-surface-500">Manage your profile and orders</p>
                 </div>
             </div>
 
-            <div className="space-y-6">
+            <div className="space-y-8">
+                {/* Profile Settings Section */}
+                <div>
+                    <ProfileForm user={user} />
+                </div>
                 <h2 className="font-display text-xl font-bold text-surface-900">
                     Order History
                 </h2>
@@ -59,8 +70,8 @@ export default async function AccountPage() {
                                     </div>
                                     <div className="flex items-center gap-3">
                                         <span className={`badge ${order.status === "PAID" ? "bg-green-100 text-green-700" :
-                                                order.status === "REFUNDED" ? "bg-orange-100 text-orange-700" :
-                                                    "bg-yellow-100 text-yellow-700"
+                                            order.status === "REFUNDED" ? "bg-orange-100 text-orange-700" :
+                                                "bg-yellow-100 text-yellow-700"
                                             }`}>
                                             {order.status}
                                         </span>

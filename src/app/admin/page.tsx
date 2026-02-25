@@ -58,7 +58,7 @@ export default async function AdminDashboardPage() {
             </div>
 
             {/* Quick Links */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
                 <Link href="/admin/products" className="card p-5 hover:border-brand-300 transition-colors">
                     <h3 className="font-semibold text-surface-900 mb-1">📚 Manage Products</h3>
                     <p className="text-sm text-surface-500">Add, edit, or remove products</p>
@@ -70,6 +70,10 @@ export default async function AdminDashboardPage() {
                 <Link href="/admin/coupons" className="card p-5 hover:border-brand-300 transition-colors">
                     <h3 className="font-semibold text-surface-900 mb-1">🏷️ Manage Coupons</h3>
                     <p className="text-sm text-surface-500">Create and manage discount codes</p>
+                </Link>
+                <Link href="/admin/settings" className="card p-5 hover:border-brand-300 transition-colors">
+                    <h3 className="font-semibold text-surface-900 mb-1">⚙️ Profile Settings</h3>
+                    <p className="text-sm text-surface-500">Update admin details and mobile</p>
                 </Link>
             </div>
 
@@ -99,8 +103,8 @@ export default async function AdminDashboardPage() {
                                     <td className="p-4 font-semibold">₹{order.total}</td>
                                     <td className="p-4">
                                         <span className={`badge ${order.status === "PAID" ? "bg-green-100 text-green-700" :
-                                                order.status === "REFUNDED" ? "bg-orange-100 text-orange-700" :
-                                                    "bg-yellow-100 text-yellow-700"
+                                            order.status === "REFUNDED" ? "bg-orange-100 text-orange-700" :
+                                                "bg-yellow-100 text-yellow-700"
                                             }`}>
                                             {order.status}
                                         </span>
