@@ -6,11 +6,16 @@ import ProductCard from "@/components/ProductCard";
 export const dynamic = "force-dynamic";
 
 async function getFeaturedProducts() {
-    return prisma.product.findMany({
-        where: { featured: true, active: true },
-        orderBy: { createdAt: "desc" },
-        take: 4,
-    });
+    try {
+        return await prisma.product.findMany({
+            where: { featured: true, active: true },
+            orderBy: { createdAt: "desc" },
+            take: 4,
+        });
+    } catch (error) {
+        console.error("Failed to fetch featured products:", error);
+        return [];
+    }
 }
 
 export default async function HomePage() {
@@ -90,9 +95,18 @@ export default async function HomePage() {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {featured.map((product, i) => (
-                        <ProductCard key={product.id} product={product as any} index={i} />
-                    ))}
+                    {featured.length > 0 ? (
+                        featured.map((product, i) => (
+                            <ProductCard key={product.id} product={product as any} index={i} />
+                        ))
+                    ) : (
+                        <div className="col-span-full py-12 text-center border-2 border-dashed border-surface-200 rounded-3xl bg-surface-50">
+                            <p className="text-surface-500 font-medium">No featured products available at the moment.</p>
+                            <Link href="/shop" className="text-brand-600 font-semibold mt-2 inline-block hover:underline">
+                                Browse all products instead →
+                            </Link>
+                        </div>
+                    )}
                 </div>
             </section>
 
