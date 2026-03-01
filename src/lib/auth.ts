@@ -12,29 +12,39 @@ export const authOptions: NextAuthOptions = {
                 password: { label: "Password", type: "password" },
             },
             async authorize(credentials) {
+                console.log("🔐 Auth attempt for:", credentials?.email);
                 if (!credentials?.email || !credentials?.password) {
+                    console.error("❌ Missing credentials");
                     throw new Error("Email and password are required");
                 }
 
-                const user = await prisma.user.findUnique({
-                    where: { email: credentials.email },
-                });
+                try {
+                    const user = await prisma.user.findUnique({
+                        where: { email: credentials.email },
+                    });
 
-                if (!user) {
-                    throw new Error("No account found with this email");
+                    if (!user) {
+                        console.error("❌ No user found with email:", credentials.email);
+                        throw new Error("No account found with this email");
+                    }
+
+                    const isValid = await compare(credentials.password, user.password);
+                    if (!isValid) {
+                        console.error("❌ Invalid password for:", credentials.email);
+                        throw new Error("Invalid password");
+                    }
+
+                    console.log("✅ Auth successful for:", user.email);
+                    return {
+                        id: user.id,
+                        email: user.email,
+                        name: user.name,
+                        role: user.role,
+                    };
+                } catch (error: any) {
+                    console.error("❌ Auth system error:", error.message || error);
+                    throw error;
                 }
-
-                const isValid = await compare(credentials.password, user.password);
-                if (!isValid) {
-                    throw new Error("Invalid password");
-                }
-
-                return {
-                    id: user.id,
-                    email: user.email,
-                    name: user.name,
-                    role: user.role,
-                };
             },
         }),
     ],
