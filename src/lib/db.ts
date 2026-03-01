@@ -13,6 +13,8 @@ const globalForPrisma = globalThis as unknown as {
     prisma: PrismaClient | undefined;
 };
 
+console.log("📡 Initializing Prisma with URL:", process.env.DATABASE_URL?.replace(/:[^:@]+@/, ':****@')); // Mask password if present
+
 export const prisma =
     globalForPrisma.prisma ??
     new PrismaClient({
