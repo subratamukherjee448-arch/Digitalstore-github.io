@@ -46,9 +46,9 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
                             className="object-cover group-hover:scale-105 transition-transform duration-500"
                         />
                         {/* Format Badge */}
-                        <span className={`absolute top-3 left-3 z-20 ${product.format === "EBOOK" ? "badge-ebook" : "badge-audiobook"
+                        <span className={`absolute top-3 left-3 z-20 ${product.format === "EBOOK" ? "badge-ebook" : product.format === "AUDIOBOOK" ? "badge-audiobook" : product.format === "WALLPAPER" ? "badge-ebook" : "badge-audiobook"
                             }`}>
-                            {product.format === "EBOOK" ? "📖 Ebook" : "🎧 Audiobook"}
+                            {product.format === "EBOOK" ? "📖 Ebook" : product.format === "AUDIOBOOK" ? "🎧 Audiobook" : product.format === "WALLPAPER" ? "🖼️ Wallpaper" : "🎨 Template"}
                         </span>
                     </div>
 

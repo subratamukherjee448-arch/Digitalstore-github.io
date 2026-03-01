@@ -4,6 +4,8 @@ const footerLinks = {
     shop: [
         { href: "/shop?format=EBOOK", label: "Ebooks" },
         { href: "/shop?format=AUDIOBOOK", label: "Audiobooks" },
+        { href: "/shop?format=WALLPAPER", label: "Wallpapers" },
+        { href: "/shop?format=CANVAS_TEMPLATE", label: "Canvas Templates" },
         { href: "/shop", label: "All Products" },
     ],
     support: [

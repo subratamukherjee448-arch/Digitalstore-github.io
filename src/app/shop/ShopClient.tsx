@@ -83,6 +83,8 @@ export default function ShopClient({
                                         { value: "", label: "All Formats" },
                                         { value: "EBOOK", label: "📖 Ebooks" },
                                         { value: "AUDIOBOOK", label: "🎧 Audiobooks" },
+                                        { value: "WALLPAPER", label: "🖼️ Wallpapers" },
+                                        { value: "CANVAS_TEMPLATE", label: "🎨 Canvas Templates" },
                                     ].map((opt) => (
                                         <button
                                             key={opt.value}

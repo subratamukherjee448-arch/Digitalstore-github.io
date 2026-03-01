@@ -67,8 +67,8 @@ export async function GET(req: NextRequest) {
                 `This is a demo download for: ${product.title}\n\nIn production, the actual file would be served from secure storage.`,
                 {
                     headers: {
-                        "Content-Type": "application/octet-stream",
-                        "Content-Disposition": `attachment; filename="${product.title.replace(/[^a-zA-Z0-9 ]/g, "")}.${product.format === "EBOOK" ? "pdf" : "mp3"}"`,
+                        "Content-Type": "text/plain",
+                        "Content-Disposition": `attachment; filename="${product.title.replace(/[^a-zA-Z0-9 ]/g, "")}_demo.txt"`,
                     },
                 }
             );

@@ -14,6 +14,13 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
     try {
         const body = await req.json();
+
+        // Fetch existing product to check if filePath changed
+        const existingProduct = await prisma.product.findUnique({
+            where: { id: params.id },
+            select: { filePath: true },
+        });
+
         const product = await prisma.product.update({
             where: { id: params.id },
             data: {
@@ -30,6 +37,21 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
                 active: body.active,
             },
         });
+
+        // If file path changed, reset download limits and extend expiry for previous buyers
+        if (existingProduct && body.filePath && existingProduct.filePath !== body.filePath) {
+            const thirtyDaysFromNow = new Date();
+            thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+
+            await prisma.downloadToken.updateMany({
+                where: { productId: params.id },
+                data: {
+                    downloadCount: 0,
+                    expiresAt: thirtyDaysFromNow,
+                },
+            });
+        }
+
         return NextResponse.json(product);
     } catch (error) {
         return NextResponse.json({ error: "Failed to update product" }, { status: 500 });

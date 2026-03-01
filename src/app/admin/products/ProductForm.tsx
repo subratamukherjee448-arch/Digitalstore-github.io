@@ -270,6 +270,26 @@ export default function ProductForm({ product }: ProductFormProps) {
                                             >
                                                 🎧 Audiobook
                                             </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setForm({ ...form, format: "WALLPAPER" })}
+                                                className={`flex-1 px-4 py-3 rounded-xl border text-sm font-semibold transition-all ${form.format === "WALLPAPER"
+                                                    ? "bg-brand-50 border-brand-300 text-brand-700 ring-2 ring-brand-200"
+                                                    : "bg-white border-surface-300 text-surface-500 hover:border-surface-400"
+                                                    }`}
+                                            >
+                                                🖼️ Wallpaper
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setForm({ ...form, format: "CANVAS_TEMPLATE" })}
+                                                className={`flex-1 px-4 py-3 rounded-xl border text-sm font-semibold transition-all ${form.format === "CANVAS_TEMPLATE"
+                                                    ? "bg-accent-50 border-accent-300 text-accent-700 ring-2 ring-accent-200"
+                                                    : "bg-white border-surface-300 text-surface-500 hover:border-surface-400"
+                                                    }`}
+                                            >
+                                                🎨 Template
+                                            </button>
                                         </div>
                                     </div>
                                     <div ref={categoryRef} className="relative">
@@ -477,8 +497,8 @@ export default function ProductForm({ product }: ProductFormProps) {
                                                 </div>
                                             )}
                                             <div className="absolute top-2 right-2">
-                                                <span className={form.format === "EBOOK" ? "badge-ebook" : "badge-audiobook"}>
-                                                    {form.format === "EBOOK" ? "📖 Ebook" : "🎧 Audio"}
+                                                <span className={form.format === "EBOOK" ? "badge-ebook" : form.format === "AUDIOBOOK" ? "badge-audiobook" : form.format === "WALLPAPER" ? "badge-ebook" : "badge-audiobook"}>
+                                                    {form.format === "EBOOK" ? "📖 Ebook" : form.format === "AUDIOBOOK" ? "🎧 Audio" : form.format === "WALLPAPER" ? "🖼️ Wallpaper" : "🎨 Template"}
                                                 </span>
                                             </div>
                                         </div>

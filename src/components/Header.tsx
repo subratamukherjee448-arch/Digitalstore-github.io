@@ -16,6 +16,8 @@ export default function Header() {
     const links = [
         { href: "/", label: "Home" },
         { href: "/shop", label: "Shop" },
+        { href: "/shop?format=WALLPAPER", label: "Wallpapers" },
+        { href: "/shop?format=CANVAS_TEMPLATE", label: "Canvas Templates" },
         { href: "/contact", label: "Contact" },
     ];
 
