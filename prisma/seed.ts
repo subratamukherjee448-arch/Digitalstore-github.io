@@ -1,15 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { hash } from "bcryptjs";
 
-// Ensure DATABASE_URL has the correct protocol for SQLite
-if (
-    process.env.DATABASE_URL &&
-    !process.env.DATABASE_URL.startsWith("file:") &&
-    !process.env.DATABASE_URL.includes("://")
-) {
-    process.env.DATABASE_URL = `file:${process.env.DATABASE_URL}`;
-}
-
 const prisma = new PrismaClient();
 
 async function main() {
