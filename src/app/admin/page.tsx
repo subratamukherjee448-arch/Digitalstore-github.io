@@ -7,9 +7,11 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Admin Dashboard" };
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export default async function AdminDashboardPage() {
     const session = await getServerSession(authOptions);
+    console.log("📊 [ADMIN_DASHBOARD] User session:", session?.user?.email, "Role:", (session?.user as any)?.role);
     if (!session?.user || (session.user as any).role !== "ADMIN") {
         redirect("/login");
     }
