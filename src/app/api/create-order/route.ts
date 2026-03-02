@@ -14,6 +14,17 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
+        const userId = (session.user as any).id;
+        // Verify user exists in current DB (SQLite on Vercel is ephemeral)
+        const userExists = await prisma.user.findUnique({ where: { id: userId } });
+        if (!userExists) {
+            console.error("❌ [CREATE_ORDER] User not found in DB:", userId);
+            return NextResponse.json({
+                error: "Session Mismatch",
+                details: "Your account was not found in the current database. Please log out and sign up again or sign in with a fresh account."
+            }, { status: 401 });
+        }
+
         const body = await req.json();
         const { items, couponCode } = body;
 
@@ -51,7 +62,6 @@ export async function POST(req: NextRequest) {
 
         const total = Math.max(subtotal - discountAmount, 1);
         const demoMode = !isRazorpayConfigured();
-        const userId = (session.user as any).id;
 
         if (demoMode) {
             // DEMO MODE: skip Razorpay, create order directly as PAID

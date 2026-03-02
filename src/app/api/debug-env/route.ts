@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
     const mask = (str: string | undefined) => {
@@ -7,11 +10,24 @@ export async function GET(req: NextRequest) {
         return `${str.slice(0, 4)}...${str.slice(-4)}`;
     };
 
+    const session = await getServerSession(authOptions);
+
+    let users: any[] = [];
+    let products: any[] = [];
+    try {
+        users = await prisma.user.findMany({ select: { id: true, email: true }, take: 5 });
+        products = await prisma.product.findMany({ select: { id: true, title: true }, take: 5 });
+    } catch (e: any) {
+        users = [{ error: e.message }];
+    }
+
     return NextResponse.json({
+        sessionUserId: (session?.user as any)?.id || "NONE",
+        sessionEmail: session?.user?.email || "NONE",
+        dbUsers: users.map(u => ({ id: u.id, email: mask(u.email) })),
+        dbProducts: products.map(p => ({ id: p.id, title: p.title })),
         RAZORPAY_KEY_ID: mask(process.env.RAZORPAY_KEY_ID),
-        RAZORPAY_KEY_SECRET: mask(process.env.RAZORPAY_KEY_SECRET),
         DATABASE_URL: mask(process.env.DATABASE_URL),
-        NEXTAUTH_URL: mask(process.env.NEXTAUTH_URL),
         NODE_ENV: process.env.NODE_ENV,
     });
 }
