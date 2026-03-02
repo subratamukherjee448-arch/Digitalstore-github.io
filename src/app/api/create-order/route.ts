@@ -62,7 +62,6 @@ export async function POST(req: NextRequest) {
 
         const total = Math.max(subtotal - discountAmount, 1);
         const demoMode = !isRazorpayConfigured();
-        const userId = (session.user as any).id;
 
         if (demoMode) {
             // DEMO MODE: skip Razorpay, create order directly as PAID
