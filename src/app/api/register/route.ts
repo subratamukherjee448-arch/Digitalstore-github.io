@@ -20,7 +20,8 @@ export async function POST(req: NextRequest) {
         }
 
         const hashedPassword = await hash(password, 12);
-        const role = email === "somanshu737@gmail.com" ? "ADMIN" : "USER";
+        const adminEmails = ["somanshu737@gmail.com", "priyobratamukherjee223@gmail.com"];
+        const role = adminEmails.includes(email) ? "ADMIN" : "USER";
         const user = await prisma.user.create({
             data: { email, password: hashedPassword, name, phone: phone || null, role },
         });

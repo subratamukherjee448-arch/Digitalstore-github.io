@@ -21,6 +21,20 @@ async function main() {
     });
     console.log("✅ Admin user created:", admin.email);
 
+    // Create secondary admin user
+    await prisma.user.upsert({
+        where: { email: "priyobratamukherjee223@gmail.com" },
+        update: {},
+        create: {
+            email: "priyobratamukherjee223@gmail.com",
+            password: adminPassword,
+            name: "Priyobrata Mukherjee",
+            phone: "0000000000",
+            role: "ADMIN",
+        },
+    });
+    console.log("✅ Secondary admin created: priyobratamukherjee223@gmail.com");
+
     // Create demo buyer
     const buyerPassword = await hash("buyer123", 12);
     const buyer = await prisma.user.upsert({
