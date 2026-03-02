@@ -6,6 +6,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Admin Dashboard" };
+export const dynamic = 'force-dynamic';
 
 export default async function AdminDashboardPage() {
     const session = await getServerSession(authOptions);

@@ -98,22 +98,10 @@ export default function CheckoutPage() {
 
             console.log("🚀 [CHECKOUT] Create order response status:", res.status);
             if (!res.ok) {
-                let errorData;
-                const contentType = res.headers.get("content-type");
-                if (contentType && contentType.includes("application/json")) {
-                    errorData = await res.json();
-                } else {
-                    const text = await res.text();
-                    errorData = {
-                        error: "Server Error",
-                        details: text.slice(0, 1000), // Show first 1000 chars of HTML if it's a crash page
-                        isHtml: contentType?.includes("html")
-                    };
-                }
-
-                console.error("❌ [CHECKOUT] Create order failed:", errorData);
-                setRawError(errorData);
-                throw new Error(errorData.details || errorData.error || "Failed to create order");
+                const data = await res.json();
+                console.error("❌ [CHECKOUT] Create order failed:", data);
+                setRawError(data);
+                throw new Error(data.details || data.error || "Failed to create order");
             }
 
             const orderData = await res.json();
