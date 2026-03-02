@@ -19,13 +19,22 @@ export default function CheckoutPage() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
+    const [rawError, setRawError] = useState<any>(null);
     const [demoMode, setDemoMode] = useState<boolean | null>(null);
 
     // Detect whether Razorpay is configured (live) or not (demo)
     useEffect(() => {
         fetch("/api/config-status")
             .then((res) => res.json())
-            .then((data) => setDemoMode(data.demoMode))
+            .then((data) => {
+                setDemoMode(data.demoMode);
+                if (data.database.status !== "Connected") {
+                    setError(`Database Search Error: ${data.database.status}`);
+                }
+                if (!data.session.active) {
+                    setError("Session Error: You appear to be logged out. Please log in again.");
+                }
+            })
             .catch(() => setDemoMode(true)); // fallback to demo
     }, []);
 
@@ -71,10 +80,12 @@ export default function CheckoutPage() {
     }
 
     const handleCheckout = async () => {
+        console.log("🚀 [CHECKOUT] Starting handleCheckout...");
         setLoading(true);
         setError("");
 
         try {
+            console.log("🚀 [CHECKOUT] Creating order on server...", items.length, "items");
             // 1. Create order on server
             const res = await fetch("/api/create-order", {
                 method: "POST",
@@ -85,21 +96,39 @@ export default function CheckoutPage() {
                 }),
             });
 
+            console.log("🚀 [CHECKOUT] Create order response status:", res.status);
             if (!res.ok) {
-                const data = await res.json();
-                throw new Error(data.error || "Failed to create order");
+                let errorData;
+                const contentType = res.headers.get("content-type");
+                if (contentType && contentType.includes("application/json")) {
+                    errorData = await res.json();
+                } else {
+                    const text = await res.text();
+                    errorData = {
+                        error: "Server Error",
+                        details: text.slice(0, 1000), // Show first 1000 chars of HTML if it's a crash page
+                        isHtml: contentType?.includes("html")
+                    };
+                }
+
+                console.error("❌ [CHECKOUT] Create order failed:", errorData);
+                setRawError(errorData);
+                throw new Error(errorData.details || errorData.error || "Failed to create order");
             }
 
             const orderData = await res.json();
+            console.log("🚀 [CHECKOUT] Order data received:", orderData.orderId, "DemoMode:", orderData.demoMode);
 
             // DEMO MODE: order is already paid, go to success
             if (orderData.demoMode) {
+                console.log("🚀 [CHECKOUT] Demo mode detected, clearing cart and redirecting...");
                 clearCart();
                 router.push(`/checkout/success?orderId=${orderData.orderId}`);
                 return;
             }
 
             // LIVE MODE: Open Razorpay checkout
+            console.log("🚀 [CHECKOUT] Live mode - loading Razorpay...");
             const loadRazorpay = (): Promise<boolean> => {
                 return new Promise((resolve) => {
                     if (window.Razorpay) { resolve(true); return; }
@@ -113,11 +142,13 @@ export default function CheckoutPage() {
 
             const loaded = await loadRazorpay();
             if (!loaded) {
+                console.error("❌ [CHECKOUT] Razorpay failed to load");
                 setError("Failed to load payment gateway.");
                 setLoading(false);
                 return;
             }
 
+            console.log("🚀 [CHECKOUT] Opening Razorpay modal...");
             const options = {
                 key: orderData.razorpayKeyId,
                 amount: orderData.amount,
@@ -131,6 +162,7 @@ export default function CheckoutPage() {
                 },
                 theme: { color: "#4f46e5" },
                 handler: async function (response: any) {
+                    console.log("🚀 [CHECKOUT] Razorpay payment successful, verifying...", response.razorpay_payment_id);
                     try {
                         const verifyRes = await fetch("/api/verify-payment", {
                             method: "POST",
@@ -142,25 +174,36 @@ export default function CheckoutPage() {
                                 orderId: orderData.orderId,
                             }),
                         });
+                        console.log("🚀 [CHECKOUT] Verify payment status:", verifyRes.status);
                         if (verifyRes.ok) {
+                            console.log("✅ [CHECKOUT] Payment verified, redirecting to success");
                             clearCart();
                             router.push(`/checkout/success?orderId=${orderData.orderId}`);
                         } else {
+                            console.error("❌ [CHECKOUT] Payment verification failed at API");
                             router.push(`/checkout/failure?orderId=${orderData.orderId}`);
                         }
-                    } catch {
+                    } catch (err) {
+                        console.error("❌ [CHECKOUT] Exception during verification:", err);
                         router.push(`/checkout/failure?orderId=${orderData.orderId}`);
                     }
                 },
-                modal: { ondismiss: () => setLoading(false) },
+                modal: {
+                    ondismiss: () => {
+                        console.log("🚀 [CHECKOUT] Razorpay modal dismissed");
+                        setLoading(false);
+                    }
+                },
             };
 
             const razorpay = new window.Razorpay(options);
             razorpay.on("payment.failed", (resp: any) => {
+                console.error("❌ [CHECKOUT] Razorpay payment failed event:", resp.error.description);
                 router.push(`/checkout/failure?reason=${resp.error.description}`);
             });
             razorpay.open();
         } catch (err: any) {
+            console.error("❌ [CHECKOUT] handleCheckout caught error:", err);
             setError(err.message || "Something went wrong");
             setLoading(false);
         }
@@ -238,7 +281,17 @@ export default function CheckoutPage() {
 
                 {error && (
                     <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
-                        <p className="text-sm text-red-700">{error}</p>
+                        <p className="text-sm text-red-700 font-semibold mb-2">{error}</p>
+                        {rawError && (
+                            <div className="mt-2 p-3 bg-red-100/50 rounded-lg border border-red-200 overflow-auto max-h-60">
+                                <p className="text-[10px] font-mono whitespace-pre-wrap text-red-900">
+                                    {JSON.stringify(rawError, null, 2)}
+                                </p>
+                            </div>
+                        )}
+                        <p className="text-[10px] text-red-600 mt-2 italic">
+                            Tip: If you see "Unauthorized", please try logging out and back in.
+                        </p>
                     </div>
                 )}
 

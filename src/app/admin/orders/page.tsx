@@ -46,7 +46,7 @@ export default async function AdminOrdersPage() {
                                         <div className="text-xs text-surface-400">{order.user.email}</div>
                                     </td>
                                     <td className="p-4 text-surface-500 text-xs max-w-[200px] truncate">
-                                        {order.items.map((i: any) => i.product.title).join(", ")}
+                                        {order.items.map((i: any) => i.product?.title || "Unknown Product (Deleted)").join(", ")}
                                     </td>
                                     <td className="p-4 font-semibold">₹{order.total}</td>
                                     <td className="p-4">

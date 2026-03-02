@@ -17,6 +17,7 @@ const getDatabaseUrl = () => {
 
     // In production (Vercel), we copy the bundled DB to /tmp for read/write access
     if (process.env.NODE_ENV === "production") {
+        console.log(`📡 [DB] Production environment detected. Target: ${tmpPath}`);
         if (!fs.existsSync(tmpPath)) {
             const possiblePaths = [
                 path.join(process.cwd(), "prisma", "dev.db"),
@@ -24,23 +25,37 @@ const getDatabaseUrl = () => {
                 path.join(process.cwd(), ".next/server/chunks", "dev.db"),
             ];
 
+            console.log(`📡 [DB] Searching for source DB in: ${JSON.stringify(possiblePaths)}`);
+            let found = false;
             for (const src of possiblePaths) {
                 if (fs.existsSync(src)) {
                     try {
                         fs.copyFileSync(src, tmpPath);
-                        console.log(`✅ Production DB initialized at ${tmpPath}`);
+                        console.log(`✅ [DB] Copied source DB from ${src} to ${tmpPath}`);
+                        found = true;
                         break;
                     } catch (e) {
-                        console.error(`❌ Failed to copy DB:`, e);
+                        console.error(`❌ [DB] Failed to copy DB from ${src}:`, e);
                     }
                 }
             }
+            if (!found) {
+                console.error(`❌ [DB] Could not find source dev.db in any possible path.`);
+            }
+        } else {
+            console.log(`📡 [DB] /tmp/dev.db already exists.`);
         }
         return `file:${tmpPath}`;
     }
 
     // Local development
-    return process.env.SQLITE_URL || `file:${path.join(process.cwd(), "prisma", "dev.db")}`;
+    const prismaDir = path.resolve(process.cwd(), "prisma");
+    const localDbPath = path.join(prismaDir, "dev.db");
+
+    // We prioritize making the path absolute to the prisma folder
+    // This fixes issues where "file:./dev.db" might point to the project root instead of /prisma
+    console.log(`📡 [DB] Local SQLite target: ${localDbPath}`);
+    return `file:${localDbPath}`;
 };
 
 export const prisma =

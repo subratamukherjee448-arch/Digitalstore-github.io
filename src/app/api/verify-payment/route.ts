@@ -8,6 +8,7 @@ export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
         const { razorpay_order_id, razorpay_payment_id, razorpay_signature, orderId } = body;
+        console.log("🛡️ [VERIFY_PAYMENT] Verifying order:", orderId, "Razorpay Order:", razorpay_order_id);
 
         if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature || !orderId) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -21,9 +22,10 @@ export async function POST(req: NextRequest) {
         );
 
         if (!isValid) {
-            console.error("Invalid Razorpay signature for order:", orderId);
+            console.error("❌ [VERIFY_PAYMENT] Invalid Razorpay signature for order:", orderId);
             return NextResponse.json({ error: "Invalid payment signature" }, { status: 400 });
         }
+        console.log("🛡️ [VERIFY_PAYMENT] Signature valid.");
 
         // Fetch order
         const order = await prisma.order.findUnique({
@@ -64,6 +66,7 @@ export async function POST(req: NextRequest) {
         );
 
         // Update order status
+        console.log("🛡️ [VERIFY_PAYMENT] Updating order status to PAID...");
         await prisma.order.update({
             where: { id: orderId },
             data: {
@@ -71,6 +74,7 @@ export async function POST(req: NextRequest) {
                 razorpayPaymentId: razorpay_payment_id,
             },
         });
+        console.log("✅ [VERIFY_PAYMENT] Order status updated.");
 
         // Update coupon usage
         if (order.couponCode) {

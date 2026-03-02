@@ -2,13 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { isRazorpayConfigured } from "@/lib/razorpay";
+import { isRazorpayConfigured, getRazorpayInstance } from "@/lib/razorpay";
 import { v4 as uuidv4 } from "uuid";
 
 
 export async function POST(req: NextRequest) {
     try {
         const session = await getServerSession(authOptions);
+        console.log("🛒 [CREATE_ORDER] Request from user:", session?.user?.email, "ID:", (session?.user as any)?.id);
         if (!session?.user) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
@@ -25,6 +26,7 @@ export async function POST(req: NextRequest) {
         const products = await prisma.product.findMany({
             where: { id: { in: productIds }, active: true },
         });
+        console.log("🛒 [CREATE_ORDER] Found products:", products.length, "/", productIds.length);
 
         if (products.length !== productIds.length) {
             return NextResponse.json({ error: "Some products are unavailable" }, { status: 400 });
@@ -104,40 +106,54 @@ export async function POST(req: NextRequest) {
             });
         }
 
-        // LIVE MODE: create Razorpay order
-        const { getRazorpayInstance } = require("@/lib/razorpay");
-        const razorpay = getRazorpayInstance();
-        const razorpayOrder = await razorpay.orders.create({
-            amount: total * 100,
-            currency: "INR",
-            receipt: `order_${Date.now()}`,
-        });
+        console.log("🛒 [CREATE_ORDER] Live Mode - Creating Razorpay order...");
+        try {
+            const razorpay = getRazorpayInstance();
+            const amount = Math.round(total * 100);
+            console.log("🛒 [CREATE_ORDER] Total:", total, "Amount (paise):", amount);
 
-        const order = await prisma.order.create({
-            data: {
-                userId,
-                total,
-                status: "PENDING",
+            const razorpayOrder = await razorpay.orders.create({
+                amount,
+                currency: "INR",
+                receipt: `order_${Date.now()}`,
+            });
+            console.log("🛒 [CREATE_ORDER] Razorpay order created:", razorpayOrder.id);
+
+            console.log("🛒 [CREATE_ORDER] Saving PENDING order to DB...");
+            const order = await prisma.order.create({
+                data: {
+                    userId,
+                    total,
+                    status: "PENDING",
+                    razorpayOrderId: razorpayOrder.id,
+                    couponCode: couponCode || null,
+                    discountAmount,
+                    items: { create: orderItems },
+                },
+                include: { items: true },
+            });
+            console.log("✅ [CREATE_ORDER] Order saved successfully:", order.id);
+
+            return NextResponse.json({
+                orderId: order.id,
                 razorpayOrderId: razorpayOrder.id,
-                couponCode: couponCode || null,
-                discountAmount,
-                items: { create: orderItems },
-            },
-            include: { items: true },
-        });
-
-        return NextResponse.json({
-            orderId: order.id,
-            razorpayOrderId: razorpayOrder.id,
-            razorpayKeyId: process.env.RAZORPAY_KEY_ID,
-            amount: total * 100,
-            currency: "INR",
-            demoMode: false,
-        });
+                razorpayKeyId: process.env.RAZORPAY_KEY_ID,
+                amount,
+                currency: "INR",
+                demoMode: false,
+            });
+        } catch (rzpErr: any) {
+            console.error("❌ [CREATE_ORDER] Razorpay/DB Error:", rzpErr);
+            throw rzpErr;
+        }
     } catch (error: any) {
-        console.error("Create order error:", error);
+        console.error("❌ [CREATE_ORDER] Top-level error:", error);
         return NextResponse.json(
-            { error: "Failed to create order" },
+            {
+                error: "Failed to create order",
+                details: error.message,
+                stack: error.stack
+            },
             { status: 500 }
         );
     }

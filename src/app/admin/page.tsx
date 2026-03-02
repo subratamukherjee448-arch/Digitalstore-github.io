@@ -98,7 +98,7 @@ export default async function AdminDashboardPage() {
                                     <td className="p-4 font-mono text-xs">#{order.id.slice(-8).toUpperCase()}</td>
                                     <td className="p-4">{order.user.name}</td>
                                     <td className="p-4 text-surface-500">
-                                        {order.items.map((i: any) => i.product.title).join(", ")}
+                                        {order.items.map((i: any) => i.product?.title || "Unknown Product (Deleted)").join(", ")}
                                     </td>
                                     <td className="p-4 font-semibold">₹{order.total}</td>
                                     <td className="p-4">

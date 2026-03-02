@@ -38,6 +38,7 @@ export async function POST(req: NextRequest) {
         });
         return NextResponse.json(product);
     } catch (error: any) {
+        console.error("ADMIN_PRODUCTS_ERROR:", error);
         return NextResponse.json({ error: "Failed to create product" }, { status: 500 });
     }
 }
